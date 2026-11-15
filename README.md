@@ -44,9 +44,21 @@ Quedan costos posibles que no son cero: unos centavos por el secreto adicional s
    powershell -ExecutionPolicy Bypass -File .\probar.ps1 -Proyecto <id-del-proyecto>
    ```
 
-   Comprueba que sin credenciales responde 401, que con credenciales responde 200, mide el tiempo de tres renders y verifica que una foto inexistente produzca un 409. Esperado: un slide en menos de 30 s tras el arranque en frío.
+   Comprueba que el render sin credenciales responde 401, que con credenciales responde 200, mide el tiempo de tres renders y verifica que una foto inexistente produzca un 409. Esperado: un slide en menos de 30 s tras el arranque en frío.
 
 3. Configurar n8n: en el nodo que renderiza, usar la URL del servicio (`gcloud run services describe gotenberg --region us-east1 --format="value(status.url)"`), autenticación básica con el usuario y la clave del archivo de credenciales, y procesar los slides de a uno.
+
+## Fotos que no cargan
+
+En Gotenberg 8.40.0, las opciones `failOnResourceHttpStatusCodes` y `failOnResourceLoadingFailed` no hacen fallar una captura (`/forms/chromium/screenshot/html`) cuando una foto responde 404 o no se puede resolver: el render devuelve 200 con la foto vacía. Se comprobó con Gotenberg en Docker y en Cloud Run.
+
+Lo que sí funciona es que cada `<img>` lance un error cuando no carga, y pedir `failOnConsoleExceptions=true`:
+
+```html
+<img src="..." onerror="throw new Error('foto no cargo')">
+```
+
+Con eso una foto inexistente o un dominio que no resuelve da 409, y una foto válida da 200. Se recomienda enviar también `waitForExpression=Array.from(document.images).every(i => i.complete)` para esperar a que todas las fotos terminen de cargar. El HTML que arma el flujo de n8n debe incluir el `onerror` en cada foto.
 
 ## Vigilar el costo
 
