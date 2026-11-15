@@ -1,0 +1,6 @@
+*credenciales*
+*.local.txt
+.env
+.env.*
+*.key
+*.pem
